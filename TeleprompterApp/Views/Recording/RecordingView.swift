@@ -43,25 +43,28 @@ struct RecordingView: View {
                 let isLandscape = geometry.size.width > geometry.size.height
                 
                 if isLandscape {
-                    // Landscape: teleprompter on the left side
+                    // Landscape: teleprompter on the left side, full height
                     HStack(spacing: 0) {
                         TeleprompterOverlay(
                             script: appState.currentScript ?? Script.sample,
                             engine: teleprompterEngine,
-                            settings: appState.settings
+                            settings: appState.settings,
+                            isLandscape: true
                         )
-                        .frame(width: geometry.size.width * 0.40)
+                        .frame(width: geometry.size.width * 0.40, height: geometry.size.height)
                         .clipped()
                         
                         Spacer()
                     }
+                    .ignoresSafeArea()
                 } else {
                     // Portrait: taller overlay, text closer to center
                     VStack(spacing: 0) {
                         TeleprompterOverlay(
                             script: appState.currentScript ?? Script.sample,
                             engine: teleprompterEngine,
-                            settings: appState.settings
+                            settings: appState.settings,
+                            isLandscape: false
                         )
                         .frame(height: geometry.size.height * 0.45)
                         .clipped()
@@ -120,6 +123,8 @@ struct RecordingView: View {
             }
         }
         .animation(.spring(response: 0.3), value: showCameraControls)
+        .toolbar(cameraService.isRecording ? .hidden : .visible, for: .tabBar)
+        .animation(.easeInOut(duration: 0.3), value: cameraService.isRecording)
         .task {
             await setupCamera()
         }
