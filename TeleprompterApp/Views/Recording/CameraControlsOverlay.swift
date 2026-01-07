@@ -353,30 +353,46 @@ struct FilterPickerSheet: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(CameraFilter.allCases) { filter in
-                        Button {
-                            selectedFilter = filter
-                            dismiss()
-                        } label: {
-                            VStack(spacing: 8) {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(filterPreviewColor(for: filter))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedFilter == filter ? Color.yellow : Color.clear, lineWidth: 3)
-                                    )
-                                
-                                Text(filter.rawValue)
-                                    .font(.caption)
-                                    .foregroundColor(selectedFilter == filter ? .yellow : .primary)
+            VStack(spacing: 0) {
+                // Notice banner
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.blue)
+                    Text("Filter preview coming soon. Selected filter will be applied to saved video.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(12)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.top)
+                
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(CameraFilter.allCases) { filter in
+                            Button {
+                                selectedFilter = filter
+                                dismiss()
+                            } label: {
+                                VStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(filterPreviewColor(for: filter))
+                                        .frame(width: 60, height: 60)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(selectedFilter == filter ? Color.yellow : Color.clear, lineWidth: 3)
+                                        )
+                                    
+                                    Text(filter.rawValue)
+                                        .font(.caption)
+                                        .foregroundColor(selectedFilter == filter ? .yellow : .primary)
+                                }
                             }
                         }
                     }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
