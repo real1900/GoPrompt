@@ -5,7 +5,6 @@ struct ScriptListView: View {
     @StateObject private var storage = ScriptStorageService()
     @EnvironmentObject var appState: AppState
     
-    @State private var showingEditor = false
     @State private var editingScript: Script?
     @State private var isCreatingNew = false
     
@@ -30,28 +29,32 @@ struct ScriptListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingEditor) {
-                if let script = editingScript {
-                    ScriptEditorView(
-                        script: Binding(
-                            get: { script },
-                            set: { editingScript = $0 }
-                        ),
-                        isNewScript: isCreatingNew,
-                        onSave: { savedScript in
-                            Task {
-                                await storage.loadScripts()
-                            }
-                        },
-                        onDelete: {
-                            Task {
-                                if let script = editingScript {
-                                    try? await storage.delete(script)
+            .sheet(item: $editingScript) { script in
+                ScriptEditorView(
+                    script: Binding(
+                        get: { script },
+                        set: { newScript in
+                            if let index = storage.scripts.firstIndex(where: { $0.id == script.id }) {
+                                Task {
+                                    try? await storage.save(newScript)
                                 }
                             }
                         }
-                    )
-                }
+                    ),
+                    isNewScript: isCreatingNew,
+                    onSave: { savedScript in
+                        Task {
+                            await storage.loadScripts()
+                        }
+                        editingScript = nil
+                    },
+                    onDelete: {
+                        Task {
+                            try? await storage.delete(script)
+                        }
+                        editingScript = nil
+                    }
+                )
             }
             .task {
                 await storage.loadScripts()
@@ -107,13 +110,11 @@ struct ScriptListView: View {
     private func createNewScript() {
         isCreatingNew = true
         editingScript = storage.createNewScript()
-        showingEditor = true
     }
     
     private func editScript(_ script: Script) {
         isCreatingNew = false
         editingScript = script
-        showingEditor = true
     }
     
     private func deleteScript(_ script: Script) {
