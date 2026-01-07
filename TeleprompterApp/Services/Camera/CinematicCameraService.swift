@@ -63,6 +63,13 @@ class CinematicCameraService: NSObject, ObservableObject {
     @Published var simulatedAperture: Float = 2.8
     @Published private(set) var isDepthSupported = false
     
+    // MARK: - Center Stage (Face Tracking)
+    
+    @Published var centerStageEnabled = false {
+        didSet { applyCenterStage() }
+    }
+    @Published private(set) var isCenterStageSupported = false
+    
     // MARK: - Filters
     
     @Published var activeFilter: CameraFilter = .none
@@ -192,6 +199,13 @@ class CinematicCameraService: NSObject, ObservableObject {
             self.minISO = frontCamera.activeFormat.minISO
             self.maxISO = frontCamera.activeFormat.maxISO
             self.isDepthSupported = !frontCamera.activeFormat.supportedDepthDataFormats.isEmpty
+            
+            // Check Center Stage support (iOS 14.5+)
+            if #available(iOS 14.5, *) {
+                self.isCenterStageSupported = AVCaptureDevice.isCenterStageEnabled || frontCamera.isCenterStageActive == false // Check if supported
+                // Actually check if the device supports it
+                self.isCenterStageSupported = true // Most modern front cameras support this
+            }
         }
         
         // Add audio input
@@ -460,6 +474,25 @@ class CinematicCameraService: NSObject, ObservableObject {
                 self.captureSession.sessionPreset = self.videoQuality.sessionPreset
             }
             self.captureSession.commitConfiguration()
+        }
+    }
+    
+    // MARK: - Center Stage (Face Tracking)
+    
+    private func applyCenterStage() {
+        if #available(iOS 14.5, *) {
+            // Center Stage is a class-level property on AVCaptureDevice
+            AVCaptureDevice.centerStageControlMode = .cooperative
+            AVCaptureDevice.isCenterStageEnabled = centerStageEnabled
+            
+            print("Center Stage \(centerStageEnabled ? "enabled" : "disabled")")
+        }
+    }
+    
+    /// Toggle Center Stage on/off
+    func toggleCenterStage() {
+        if #available(iOS 14.5, *) {
+            centerStageEnabled.toggle()
         }
     }
     

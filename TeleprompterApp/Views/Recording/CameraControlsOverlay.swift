@@ -20,7 +20,7 @@ struct CameraControlsOverlay: View {
             }
             
             // Control buttons bar
-            HStack(spacing: 20) {
+            HStack(spacing: 16) {
                 // Focus
                 ControlPanelButton(
                     icon: cameraService.focusMode.systemImage,
@@ -52,6 +52,15 @@ struct CameraControlsOverlay: View {
                     withAnimation(.spring(response: 0.3)) {
                         expandedPanel = expandedPanel == .whiteBalance ? nil : .whiteBalance
                     }
+                }
+                
+                // Center Stage (Face Tracking)
+                ControlPanelButton(
+                    icon: cameraService.centerStageEnabled ? "person.crop.rectangle.fill" : "person.crop.rectangle",
+                    label: "Stage",
+                    isActive: cameraService.centerStageEnabled
+                ) {
+                    cameraService.toggleCenterStage()
                 }
                 
                 // Filter
