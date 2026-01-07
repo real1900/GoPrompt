@@ -34,9 +34,9 @@ struct TeleprompterOverlay: View {
                 VStack(spacing: 0) {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 0) {
-                            // Top spacer to position first line in active zone
+                            // Top spacer to position first line below status bar/Dynamic Island
                             Spacer()
-                                .frame(height: activeZoneHeight * 0.2)
+                                .frame(height: 60) // Fixed padding below notch/status bar
                             
                             // The script text
                             Text(script.content)
@@ -61,7 +61,6 @@ struct TeleprompterOverlay: View {
                     }
                     .scrollDisabled(true) // Controlled by engine, not user scroll
                 }
-                .safeAreaPadding(.top) // Respect safe area (below Dynamic Island)
                 .frame(width: columnWidth)
                 .frame(maxWidth: .infinity) // Center the column
                 

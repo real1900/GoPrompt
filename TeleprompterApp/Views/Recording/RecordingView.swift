@@ -38,14 +38,14 @@ struct RecordingView: View {
                 )
                 
                 // Teleprompter Overlay (top portion, eye-contact optimized)
-                // Uses top ~25% of screen with narrow column near camera
+                // Background extends under notch, but TEXT stays in safe area
                 VStack(spacing: 0) {
                     TeleprompterOverlay(
                         script: appState.currentScript ?? Script.sample,
                         engine: teleprompterEngine,
                         settings: appState.settings
                     )
-                    .frame(height: geometry.size.height * 0.25)
+                    .frame(height: geometry.size.height * 0.30)
                     .clipped()
                     
                     Spacer()
