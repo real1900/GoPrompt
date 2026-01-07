@@ -17,6 +17,15 @@ struct RecordingView: View {
     @State private var showFocusIndicator = false
     @State private var focusIndicatorPosition: CGPoint = .zero
     
+    // Track device orientation for camera-side text positioning
+    @State private var deviceOrientation: UIDeviceOrientation = UIDevice.current.orientation
+    
+    // Camera is on LEFT when landscapeLeft (home button on left)
+    // Camera is on RIGHT when landscapeRight (home button on right)
+    private var cameraOnLeft: Bool {
+        deviceOrientation == .landscapeLeft || deviceOrientation == .unknown || deviceOrientation == .portrait
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -39,22 +48,37 @@ struct RecordingView: View {
                 
                 // Teleprompter Overlay - adaptive to orientation
                 // Portrait: taller overlay (45% of height) to bring text toward center
-                // Landscape: left side panel to keep text near camera
+                // Landscape: side panel on camera side for better eye contact
                 let isLandscape = geometry.size.width > geometry.size.height
                 
                 if isLandscape {
-                    // Landscape: teleprompter on the left side, full height
+                    // Landscape: teleprompter on the camera side, full height
                     HStack(spacing: 0) {
-                        TeleprompterOverlay(
-                            script: appState.currentScript ?? Script.sample,
-                            engine: teleprompterEngine,
-                            settings: appState.settings,
-                            isLandscape: true
-                        )
-                        .frame(width: geometry.size.width * 0.40, height: geometry.size.height)
-                        .clipped()
-                        
-                        Spacer()
+                        if cameraOnLeft {
+                            // Camera on left - text on left
+                            TeleprompterOverlay(
+                                script: appState.currentScript ?? Script.sample,
+                                engine: teleprompterEngine,
+                                settings: appState.settings,
+                                isLandscape: true
+                            )
+                            .frame(width: geometry.size.width * 0.40, height: geometry.size.height)
+                            .clipped()
+                            
+                            Spacer()
+                        } else {
+                            // Camera on right - text on right
+                            Spacer()
+                            
+                            TeleprompterOverlay(
+                                script: appState.currentScript ?? Script.sample,
+                                engine: teleprompterEngine,
+                                settings: appState.settings,
+                                isLandscape: true
+                            )
+                            .frame(width: geometry.size.width * 0.40, height: geometry.size.height)
+                            .clipped()
+                        }
                     }
                     .ignoresSafeArea()
                 } else {
@@ -137,6 +161,15 @@ struct RecordingView: View {
         .onDisappear {
             cameraService.stopSession()
             teleprompterEngine.stopScrolling()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            let newOrientation = UIDevice.current.orientation
+            if newOrientation.isLandscape || newOrientation == .portrait {
+                deviceOrientation = newOrientation
+            }
+        }
+        .onAppear {
+            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         }
     }
     

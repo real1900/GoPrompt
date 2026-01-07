@@ -13,10 +13,10 @@ struct RecordingControlsView: View {
     
     var body: some View {
         if cameraService.isRecording {
-            // RECORDING MODE: Floating stop button + timer pill only
+            // RECORDING MODE: Stop button centered at bottom + timer pill
             ZStack {
-                // Stop button - floating on right side, vertically centered
-                HStack {
+                // Stop button - centered at bottom
+                VStack {
                     Spacer()
                     Button {
                         onStopTapped()
@@ -32,7 +32,7 @@ struct RecordingControlsView: View {
                         }
                         .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
-                    .padding(.trailing, 20)
+                    .padding(.bottom, 40)
                 }
                 
                 // Timer pill - bottom right corner
@@ -230,20 +230,20 @@ struct RecordButton: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Outer ring
+                // Outer ring (reduced 10%: 80 -> 72)
                 Circle()
-                    .stroke(Color.white, lineWidth: 4)
-                    .frame(width: 80, height: 80)
+                    .stroke(Color.white, lineWidth: 3.5)
+                    .frame(width: 72, height: 72)
                 
                 // Inner shape (circle when idle, square when recording)
                 if isRecording {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 7)
                         .fill(Color.red)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 29, height: 29)
                 } else {
                     Circle()
                         .fill(Color.red)
-                        .frame(width: 60, height: 60)
+                        .frame(width: 54, height: 54)
                 }
             }
         }

@@ -59,7 +59,7 @@ struct TeleprompterOverlay: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: isLandscape ? .leading : .center)
                                 .padding(.horizontal, isLandscape ? 16 : 20)
-                                .padding(.leading, isLandscape ? geometry.safeAreaInsets.leading + 10 : 0)
+                                .padding(.leading, isLandscape ? max(geometry.safeAreaInsets.leading, 38) : 0)
                             
                             // Bottom spacer for scroll-through
                             Spacer()

@@ -10,6 +10,18 @@ struct ContentView: View {
         case settings
     }
     
+    init() {
+        // Configure tab bar with glass/translucent appearance
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+//        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+//
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        
+    }
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             ScriptListView()

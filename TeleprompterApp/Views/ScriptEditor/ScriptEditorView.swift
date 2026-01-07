@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Script editor view for creating and editing teleprompter scripts
 struct ScriptEditorView: View {
-    @Binding var script: Script
+    // Use local State copy instead of Binding to avoid revert issues
+    @State private var editableScript: Script
     @StateObject private var storage = ScriptStorageService()
     @Environment(\.dismiss) var dismiss
     
@@ -10,6 +11,7 @@ struct ScriptEditorView: View {
     @State private var isSaving = false
     @FocusState private var isContentFocused: Bool
     
+    let originalScript: Script
     var isNewScript: Bool
     var onSave: ((Script) -> Void)?
     var onDelete: (() -> Void)?
@@ -20,7 +22,10 @@ struct ScriptEditorView: View {
         onSave: ((Script) -> Void)? = nil,
         onDelete: (() -> Void)? = nil
     ) {
-        self._script = script
+        // Create local copy from the binding's current value
+        let scriptValue = script.wrappedValue
+        self._editableScript = State(initialValue: scriptValue)
+        self.originalScript = scriptValue
         self.isNewScript = isNewScript
         self.onSave = onSave
         self.onDelete = onDelete
@@ -30,7 +35,7 @@ struct ScriptEditorView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Title field
-                TextField("Script Title", text: $script.title)
+                TextField("Script Title", text: $editableScript.title)
                     .font(.title2.bold())
                     .padding()
                     .background(Color(.systemBackground))
@@ -38,7 +43,7 @@ struct ScriptEditorView: View {
                 Divider()
                 
                 // Content editor
-                TextEditor(text: $script.content)
+                TextEditor(text: $editableScript.content)
                     .font(.body)
                     .padding(.horizontal)
                     .focused($isContentFocused)
@@ -73,7 +78,7 @@ struct ScriptEditorView: View {
                     Button("Save") {
                         saveScript()
                     }
-                    .disabled(script.title.isEmpty || isSaving)
+                    .disabled(editableScript.title.isEmpty || isSaving)
                 }
                 
                 if !isNewScript {
@@ -101,7 +106,7 @@ struct ScriptEditorView: View {
     // MARK: - Computed Properties
     
     private var wordCount: Int {
-        script.content.split(separator: " ").count
+        editableScript.content.split(separator: " ").count
     }
     
     private var estimatedReadTime: Int {
@@ -114,10 +119,14 @@ struct ScriptEditorView: View {
     private func saveScript() {
         isSaving = true
         
+        // Update timestamp
+        var scriptToSave = editableScript
+        scriptToSave.updatedAt = Date()
+        
         Task {
             do {
-                try await storage.save(script)
-                onSave?(script)
+                try await storage.save(scriptToSave)
+                onSave?(scriptToSave)
                 dismiss()
             } catch {
                 print("Error saving script: \(error)")
@@ -133,3 +142,4 @@ struct ScriptEditorView: View {
         isNewScript: false
     )
 }
+

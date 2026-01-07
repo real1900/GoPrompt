@@ -1,12 +1,30 @@
 import SwiftUI
 
-/// List of saved scripts with create, edit, and delete functionality
+/// Collection of saved scripts with search, create, edit, and delete functionality
 struct ScriptListView: View {
     @StateObject private var storage = ScriptStorageService()
     @EnvironmentObject var appState: AppState
     
     @State private var editingScript: Script?
     @State private var isCreatingNew = false
+    @State private var searchText = ""
+    
+    // Grid layout
+    private let columns = [
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16)
+    ]
+    
+    // Filtered scripts based on search
+    private var filteredScripts: [Script] {
+        if searchText.isEmpty {
+            return storage.scripts
+        }
+        return storage.scripts.filter { script in
+            script.title.localizedCaseInsensitiveContains(searchText) ||
+            script.content.localizedCaseInsensitiveContains(searchText)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -16,10 +34,11 @@ struct ScriptListView: View {
                 } else if storage.scripts.isEmpty {
                     emptyStateView
                 } else {
-                    scriptsList
+                    scriptsCollection
                 }
             }
             .navigationTitle("Scripts")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search scripts...")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -77,32 +96,40 @@ struct ScriptListView: View {
         }
     }
     
-    private var scriptsList: some View {
-        List {
-            ForEach(storage.scripts) { script in
-                ScriptRowView(script: script)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        editScript(script)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            deleteScript(script)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+    private var scriptsCollection: some View {
+        ScrollView {
+            // Show message if search has no results
+            if filteredScripts.isEmpty && !searchText.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .padding(.top, 60)
+            } else {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(filteredScripts) { script in
+                        ScriptCardView(
+                            script: script,
+                            isSelected: appState.currentScript?.id == script.id
+                        )
+                        .onTapGesture {
+                            editScript(script)
+                        }
+                        .contextMenu {
+                            Button {
+                                appState.currentScript = script
+                            } label: {
+                                Label("Use Script", systemImage: "checkmark.circle")
+                            }
+                            
+                            Button(role: .destructive) {
+                                deleteScript(script)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            appState.currentScript = script
-                        } label: {
-                            Label("Use", systemImage: "checkmark")
-                        }
-                        .tint(.green)
-                    }
+                }
+                .padding(16)
             }
         }
-        .listStyle(.insetGrouped)
     }
     
     // MARK: - Methods
@@ -124,36 +151,59 @@ struct ScriptListView: View {
     }
 }
 
-// MARK: - Script Row View
+// MARK: - Script Card View
 
-struct ScriptRowView: View {
+struct ScriptCardView: View {
     let script: Script
+    let isSelected: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Title with selection indicator
             HStack {
                 Text(script.title)
                     .font(.headline)
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                }
+            }
+            
+            // Content preview
+            Text(script.content)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(3)
+            
+            Spacer()
+            
+            // Metadata
+            HStack {
+                Label("\(script.content.split(separator: " ").count)", systemImage: "text.word.spacing")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 
                 Spacer()
                 
                 Text(script.updatedAt, style: .relative)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Text(script.content)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-            
-            HStack {
-                Label("\(script.content.split(separator: " ").count) words", systemImage: "text.word.spacing")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .frame(height: 140)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
+        )
     }
 }
 
@@ -161,3 +211,4 @@ struct ScriptRowView: View {
     ScriptListView()
         .environmentObject(AppState())
 }
+
