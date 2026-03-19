@@ -21,24 +21,57 @@ The UI intentionally moves away from a "standard app" aesthetic, embodying **The
 
 ### 1. Recording Studio
 
-**Functionality:** Focus on minimal glass controls and asymmetric balance.
-**Key Feature:** Eye Contact Preservation Layout. The script reading zone is mathematically constrained to the top 15% (portrait) and dynamically mapped to the physical location of the camera hardware, guaranteeing the speaker's eyes never drift from the lens.
+**Core Purpose:** The primary capture interface optimized for eye contact and cinematic recording.
+
+**Detailed Features:**
+- **Eye Contact Preservation Layout:** Mathematically restricts the teleprompter text to the top 15% of the screen (in portrait), guaranteeing the speaker's eyes never drift from the camera hardware.
+- **Hardware-Coupled Proximity Tracking:** Automatically forces the teleprompter column to the physical side of the camera lens when rotating between `.landscapeLeft` and `.landscapeRight`.
+- **Dynamic Physics Scrolling:** Engine targets 140 WPM with an intelligent 2-second cubic interpolation "ease-in" curve so text accelerates smoothly.
+- **Minimalist Recording State:** During an active take, all secondary UI (menus, tabs) is hidden or faded, leaving only a critical Stop button and duration timer.
+- **Touch-Override Scrolling:** Users can manually scrub the script vertically during a recording without breaking the scroll engine (auto-scroll resumes exactly from the new touch-release point).
+- **Session Guard Protection:** Asynchronous logic ensures audio and video pipelines are completely "hot" before text starts scrolling, preventing ghost recordings.
 
 ### 2. Script Library
 
-**Functionality:** Minimalist typography (Plus Jakarta Sans). Data-driven list mapped to local CoreData/JSON storage.
+**Core Purpose:** Fast, local access and management of all teleprompter content.
+
+**Detailed Features:**
+- **Data-Driven Sorting:** Scripts are automatically organized by their `updatedAt` property, surfacing recently worked-on scripts immediately.
+- **Instant Storage Engine:** Powered by an asynchronous `ScriptStorageService` that relies on Codable JSON files stored securely in the app's Documents directory.
+- **Quick-Access Actions:** Swipe gestures for deleting scripts and one-tap loading into the Recording Studio.
+- **No-Line Typographic Boundaries:** Relies strictly on intentional negative space rather than standard 1px borders for separating items, matching the high-end "Obsidian" aesthetic.
 
 ### 3. Rich Text Script Editor
 
-**Functionality:** Distraction-free deep writing mode. Real-time keystroke synchronization updating Word Count metrics.
+**Core Purpose:** A distraction-free environment for writing or pasting lengthy speeches.
+
+**Detailed Features:**
+- **Distraction-Free Immersion:** Edge-to-edge typography input designed specifically for writing without interface clutter.
+- **Live Metrics Calculation:** Auto-syncs keystrokes in real-time to compute total Word Count.
+- **Estimated Duration Engine:** Calculates the exact running time of a script based on the global 140 WPM baseline setting.
+- **Immediate Persistence:** Auto-saves progress incrementally so no writing is lost if the app is suddenly closed.
 
 ### 4. Recording Gallery
 
-**Functionality:** Directly review recorded content with quick access playback controls and share options embedded into the premium glass aesthetic.
+**Core Purpose:** Post-capture review and system-level sharing of high-resolution `.mp4` video files.
+
+**Detailed Features:**
+- **In-App Playback Overlay:** Quick visual review of active session recordings before exporting them.
+- **Hardware-Level Exporting:** Leverages `PHPhotoLibrary` to securely and asynchronously export massive video files into the user's iOS Camera Roll.
+- **Deep Clean Protocol:** Implements a strict file-management sequence that instantly deletes temporary `/tmp/` buffer files upon a successful Camera Roll export, keeping the app's footprint minimal.
+- **Native Share Sheet Integration:** Direct hooks to iOS sharing (Airdrop, Messages) for fast offloading to editors or team members.
 
 ### 5. Settings & Configuration
 
-**Functionality:** High-contrast metallic toggles and hardware-coupled context menus mapped to app state (e.g., Cinematic Depth and Green Screen options).
+**Core Purpose:** Professional control over the presentation layer and cinematic computational features.
+
+**Detailed Features:**
+- **Cinematic Depth Toggle:** Live integration with CoreML (`VNGeneratePersonSegmentationRequest`) to apply computational DSLR-like background blurring.
+- **Chroma Key / Green Screen:** Leverages the active ML segmentation mask to drop out backgrounds entirely and replace them with a unified `CIColor.green` screen for post-production.
+- **Optical Typography Controls:** Granular sliders to dynamically change Font Size (from 16pt up to 72pt).
+- **Beam-Splitter Support ("Mirror Text"):** Instantly flips the X-axis rendering of the script to support physical glass teleprompter mirrors.
+- **Active Velocity Manual Override:** Slider that explicitly overrides the WPM-driven automatic scrolling speed.
+- **Display Link Frame Rates:** The engine seamlessly shifts from 30 up to 120 FPS based on device capability for zero-jitter scrolling.
 
 ---
 
