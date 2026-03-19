@@ -17,31 +17,26 @@ The UI intentionally moves away from a "standard app" aesthetic, embodying **The
 
 ## 📸 Application Interface & Functionality
 
-The application faithfully matches these high-fidelity design specifications, ensuring parity between the intended premium aesthetic and the actual, hardware-backed iOS experience.
+*Screenshots will be provided here.*
 
 ### 1. Recording Studio
-<img src="StitchDesigns/RecordingScreen.png" width="250" />
 
 **Functionality:** Focus on minimal glass controls and asymmetric balance.
 **Key Feature:** Eye Contact Preservation Layout. The script reading zone is mathematically constrained to the top 15% (portrait) and dynamically mapped to the physical location of the camera hardware, guaranteeing the speaker's eyes never drift from the lens.
 
 ### 2. Script Library
-<img src="StitchDesigns/ScriptLibrary.png" width="250" />
 
 **Functionality:** Minimalist typography (Plus Jakarta Sans). Data-driven list mapped to local CoreData/JSON storage.
 
 ### 3. Rich Text Script Editor
-<img src="StitchDesigns/ScriptEditor.png" width="250" />
 
 **Functionality:** Distraction-free deep writing mode. Real-time keystroke synchronization updating Word Count metrics.
 
 ### 4. Recording Gallery
-<img src="StitchDesigns/RecordingGallery.png" width="250" />
 
 **Functionality:** Directly review recorded content with quick access playback controls and share options embedded into the premium glass aesthetic.
 
 ### 5. Settings & Configuration
-<img src="StitchDesigns/Settings.png" width="250" />
 
 **Functionality:** High-contrast metallic toggles and hardware-coupled context menus mapped to app state (e.g., Cinematic Depth and Green Screen options).
 
