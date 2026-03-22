@@ -1,4 +1,4 @@
-Welcome to GoPrompt! 🎬
+Welcome to GoPrompt!
 
 This is our first release featuring:
 • Professional teleprompter with smooth scrolling

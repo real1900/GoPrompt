@@ -95,33 +95,58 @@ class CameraPreviewUIView: UIView {
     private func updateVideoOrientation() {
         guard let connection = previewLayer.connection else { return }
         
-        let videoOrientation: AVCaptureVideoOrientation
-        let orientation = UIDevice.current.orientation
-        switch orientation {
-        case .portrait:
-            videoOrientation = .portrait
-        case .landscapeLeft:
-            videoOrientation = .landscapeRight // UILandscapeLeft = Device rotated right
-        case .landscapeRight:
-            videoOrientation = .landscapeLeft
-        case .portraitUpsideDown:
-            videoOrientation = .portraitUpsideDown
-        default:
-            // Fallback to Window Scene orientation for .unknown or .faceUp
-            var fallback: AVCaptureVideoOrientation = .portrait
-            if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                switch windowScene.interfaceOrientation {
-                case .landscapeRight: fallback = .landscapeRight
-                case .landscapeLeft: fallback = .landscapeLeft
-                case .portraitUpsideDown: fallback = .portraitUpsideDown
-                default: fallback = .portrait
+        if #available(iOS 17.0, *) {
+            let angle: CGFloat
+            let orientation = UIDevice.current.orientation
+            switch orientation {
+            case .portrait: angle = 90
+            case .landscapeLeft: angle = 0
+            case .landscapeRight: angle = 180
+            case .portraitUpsideDown: angle = 270
+            default:
+                var fallback: CGFloat = 90
+                if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                    switch windowScene.interfaceOrientation {
+                    case .landscapeRight: fallback = 180
+                    case .landscapeLeft: fallback = 0
+                    case .portraitUpsideDown: fallback = 270
+                    default: fallback = 90
+                    }
                 }
+                angle = fallback
             }
-            videoOrientation = fallback
-        }
-        
-        if connection.isVideoOrientationSupported {
-            connection.videoOrientation = videoOrientation
+            if connection.isVideoRotationAngleSupported(angle) {
+                connection.videoRotationAngle = angle
+            }
+        } else {
+            let videoOrientation: AVCaptureVideoOrientation
+            let orientation = UIDevice.current.orientation
+            switch orientation {
+            case .portrait:
+                videoOrientation = .portrait
+            case .landscapeLeft:
+                videoOrientation = .landscapeRight // UILandscapeLeft = Device rotated right
+            case .landscapeRight:
+                videoOrientation = .landscapeLeft
+            case .portraitUpsideDown:
+                videoOrientation = .portraitUpsideDown
+            default:
+                // Fallback to Window Scene orientation for .unknown or .faceUp
+                var fallback: AVCaptureVideoOrientation = .portrait
+                if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                    switch windowScene.interfaceOrientation {
+                    case .landscapeRight: fallback = .landscapeRight
+                    case .landscapeLeft: fallback = .landscapeLeft
+                    case .portraitUpsideDown: fallback = .portraitUpsideDown
+                    default: fallback = .portrait
+                    }
+                }
+                videoOrientation = fallback
+            }
+            
+            if connection.isVideoOrientationSupported {
+                connection.videoOrientation = videoOrientation
+            }
         }
     }
     

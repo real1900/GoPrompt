@@ -15,24 +15,66 @@ struct RecordingControlsView: View {
     
     var body: some View {
         if cameraService.isRecording {
-            // RECORDING MODE: Simple Stop Button
+            // RECORDING MODE: HUD Bottom Row
             VStack {
                 Spacer()
-                Button {
-                    onStopTapped()
-                } label: {
-                    ZStack {
-                        // Outer Ring
-                        Circle()
-                            .stroke(DesignSystem.Colors.destructive.opacity(0.3), lineWidth: 4)
-                            .frame(width: 80, height: 80)
+                HStack(spacing: 8) {
+                    Spacer()
+                    // REC Pill
+                    HStack(spacing: 6) {
+                        Image(systemName: "video.fill")
+                            .foregroundColor(DesignSystem.Colors.destructive)
+                            .modifier(PulsingModifier())
                         
-                        // Stop Square
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(DesignSystem.Colors.destructive)
-                            .frame(width: 32, height: 32)
-                            .shadow(color: DesignSystem.Colors.destructive.opacity(0.5), radius: 20, x: 0, y: 0)
+                        Text(formatDuration(cameraService.recordingDuration))
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.primaryText)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .glassPanel(cornerRadius: 30)
+                    
+                    Spacer()
+                    
+                    // Stop Square inside Ring
+                    Button {
+                        onStopTapped()
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .stroke(DesignSystem.Colors.destructive.opacity(0.3), lineWidth: 4)
+                                .frame(width: 80, height: 80)
+                            
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(DesignSystem.Colors.destructive)
+                                .frame(width: 32, height: 32)
+                                .shadow(color: DesignSystem.Colors.destructive.opacity(0.5), radius: 20, x: 0, y: 0)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Pause Script Pill
+                    Button(action: {
+                        if teleprompterEngine.isPaused {
+                            teleprompterEngine.resumeScrolling()
+                        } else {
+                            teleprompterEngine.pauseScrolling()
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: teleprompterEngine.isPaused ? "play.fill" : "pause.fill")
+                                .foregroundColor(DesignSystem.Colors.primaryText)
+                            Text(teleprompterEngine.isPaused ? "RESUME" : "PAUSE")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(DesignSystem.Colors.primaryText)
+                                .tracking(1.0)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .glassPanel(cornerRadius: 30)
+                    }
+                    Spacer()
                 }
                 .padding(.bottom, 40)
             }
@@ -144,6 +186,23 @@ struct RecordingControlsView: View {
             let nextIndex = (currentIndex + 1) % allQualities.count
             cameraService.videoQuality = allQualities[nextIndex]
         }
+    }
+}
+
+struct PulsingModifier: ViewModifier {
+    @State private var isPulsing = false
+    
+    func body(content: Content) -> some View {
+        content
+            .opacity(isPulsing ? 0.3 : 1.0)
+            .animation(
+                .easeInOut(duration: 0.8)
+                .repeatForever(autoreverses: true),
+                value: isPulsing
+            )
+            .onAppear {
+                isPulsing = true
+            }
     }
 }
 

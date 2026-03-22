@@ -69,7 +69,6 @@ class GalleryViewModel: ObservableObject {
     func loadVideos() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            let loadStart = CFAbsoluteTimeGetCurrent()
             
             // 1. Fetch CoreData map for explicitly recorded videos
             let metaPayload = VideoMetadataCache.shared.getAllMetadata()

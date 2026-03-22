@@ -86,7 +86,7 @@ class ScriptStorageService: ObservableObject {
         scripts.removeAll { $0.id == script.id }
         
         let dir = scriptsDirectory
-        try await Task.detached(priority: .utility) {
+        await Task.detached(priority: .utility) {
             let fileURL = dir.appendingPathComponent("\(script.id.uuidString).json")
             try? FileManager.default.removeItem(at: fileURL)
         }.value
@@ -98,7 +98,7 @@ class ScriptStorageService: ObservableObject {
         scripts.remove(atOffsets: offsets)
         
         let dir = scriptsDirectory
-        try await Task.detached(priority: .utility) {
+        await Task.detached(priority: .utility) {
             let fileManager = FileManager.default
             for script in scriptsToDelete {
                 let fileURL = dir.appendingPathComponent("\(script.id.uuidString).json")

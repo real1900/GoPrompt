@@ -15,6 +15,41 @@ class CinematicCameraService: NSObject, ObservableObject {
     @Published private(set) var recordingDuration: TimeInterval = 0
     @Published private(set) var error: CameraError?
     
+    // MARK: - Pro & Watermark State
+    
+    nonisolated(unsafe) var renderStateIsPro: Bool = false
+    @Published private(set) var isProStatus: Bool = false {
+        didSet { renderStateIsPro = isProStatus }
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    private let watermarkImage: CIImage = {
+        let size = CGSize(width: 250, height: 60)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let img = renderer.image { ctx in
+            let text = "GoPrompt" as NSString
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 42, weight: .heavy),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.65),
+                .paragraphStyle: paragraphStyle
+            ]
+            // Draw text with a subtle drop shadow for visibility
+            let shadow = NSShadow()
+            shadow.shadowColor = UIColor.black.withAlphaComponent(0.8)
+            shadow.shadowBlurRadius = 8
+            shadow.shadowOffset = CGSize(width: 0, height: 2)
+            
+            var attribsWithShadow = attributes
+            attribsWithShadow[.shadow] = shadow
+            
+            text.draw(in: CGRect(origin: .zero, size: size), withAttributes: attribsWithShadow)
+        }
+        return CIImage(image: img)!
+    }()
+    
     // MARK: - Permissions
     
     @Published private(set) var cameraPermission: CameraPermission = .notDetermined
@@ -128,7 +163,7 @@ class CinematicCameraService: NSObject, ObservableObject {
     
     // MARK: - AVFoundation Components
     
-    nonisolated(unsafe) lazy var captureSession = AVCaptureSession()
+    nonisolated(unsafe) let captureSession = AVCaptureSession()
     nonisolated(unsafe) private var videoDeviceInput: AVCaptureDeviceInput?
     nonisolated(unsafe) private var audioDeviceInput: AVCaptureDeviceInput?
     // DELETED: `movieFileOutput` totally conflicts with VideoDataOutput at an OS-level, producing 10+ second deadlocks on startRunning()
@@ -137,7 +172,7 @@ class CinematicCameraService: NSObject, ObservableObject {
     nonisolated(unsafe) private var audioDataOutput: AVCaptureAudioDataOutput?
     
     // Depth processing (Thread-safe background processor)
-    nonisolated(unsafe) lazy var depthProcessor = DepthBlurProcessor()
+    nonisolated(unsafe) let depthProcessor = DepthBlurProcessor()
     
     // For processed frame preview
     @Published var processedPreviewImage: CIImage?
@@ -190,6 +225,13 @@ class CinematicCameraService: NSObject, ObservableObject {
     
     override init() {
         super.init()
+        
+        StoreKitManager.shared.$isProUnlocked
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isUnlocked in
+                self?.isProStatus = isUnlocked
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Permissions
@@ -791,26 +833,36 @@ class CinematicCameraService: NSObject, ObservableObject {
     }
     
     nonisolated private func updateConnectionOrientation(_ connection: AVCaptureConnection, to orientation: UIDeviceOrientation) {
-        let videoOrientation: AVCaptureVideoOrientation
-        switch orientation {
-        case .portrait:
-            videoOrientation = .portrait
-        case .landscapeLeft:
-            videoOrientation = .landscapeRight
-        case .landscapeRight:
-            videoOrientation = .landscapeLeft
-        case .portraitUpsideDown:
-            videoOrientation = .portraitUpsideDown
-        default:
-            // Fallback: assume portrait for .unknown / .faceUp.
-            // IMPORTANT: Do NOT use DispatchQueue.main.sync here — this runs on
-            // sessionQueue, and main.sync risks deadlock if main is waiting on
-            // sessionQueue (e.g. AVCaptureSession internal sync).
-            videoOrientation = .portrait
-        }
-        
-        if connection.isVideoOrientationSupported {
-            connection.videoOrientation = videoOrientation
+        if #available(iOS 17.0, *) {
+            let angle: CGFloat
+            switch orientation {
+            case .portrait: angle = 90
+            case .landscapeLeft: angle = 0
+            case .landscapeRight: angle = 180
+            case .portraitUpsideDown: angle = 270
+            default: angle = 90
+            }
+            if connection.isVideoRotationAngleSupported(angle) {
+                connection.videoRotationAngle = angle
+            }
+        } else {
+            let videoOrientation: AVCaptureVideoOrientation
+            switch orientation {
+            case .portrait:
+                videoOrientation = .portrait
+            case .landscapeLeft:
+                videoOrientation = .landscapeRight
+            case .landscapeRight:
+                videoOrientation = .landscapeLeft
+            case .portraitUpsideDown:
+                videoOrientation = .portraitUpsideDown
+            default:
+                videoOrientation = .portrait
+            }
+            
+            if connection.isVideoOrientationSupported {
+                connection.videoOrientation = videoOrientation
+            }
         }
     }
 
@@ -1015,6 +1067,38 @@ class CinematicCameraService: NSObject, ObservableObject {
             }
         }
         
+        // 1.5 Dynamic Bouncing Watermark for Non-Pro Users
+        let isPro = self.renderStateIsPro // Cached non-isolated read
+        if !isPro {
+            let t = presentationTime.seconds
+            let speed: Double = 60.0 // pixels per second
+            
+            // Deterministic bouncing pattern based purely on time (no locks!)
+            let watermarkWidth = 250.0
+            let watermarkHeight = 60.0
+            
+            let maxX = max(Double(frameSize.width) - watermarkWidth - 20, 20)
+            let maxY = max(Double(frameSize.height) - watermarkHeight - 40, 40)
+            
+            // Triangle wave generator for continuous back-and-forth bouncing
+            func triangleWave(_ t: Double, amplitude: Double) -> Double {
+                return abs(t.truncatingRemainder(dividingBy: amplitude * 2.0) - amplitude)
+            }
+            
+            let x = 20.0 + triangleWave(t * speed, amplitude: maxX - 20.0)
+            let y = 40.0 + triangleWave(t * speed * 1.3, amplitude: maxY - 40.0)
+            
+            let translate = CGAffineTransform(translationX: x, y: y)
+            let translatedWatermark = self.watermarkImage.transformed(by: translate)
+            
+            let compositeFilter = CIFilter(name: "CISourceOverCompositing")!
+            compositeFilter.setValue(translatedWatermark, forKey: kCIInputImageKey)
+            compositeFilter.setValue(ciImage, forKey: kCIInputBackgroundImageKey)
+            if let composited = compositeFilter.outputImage {
+                ciImage = composited
+            }
+        }
+        
         // 2. Heavy Write I/O (Background Thread Execution!)
         if self.renderStateIsWriting {
             if self.renderStateStartTime == nil {
@@ -1034,11 +1118,8 @@ class CinematicCameraService: NSObject, ObservableObject {
         // Cache frame size for setupAssetWriter (nonisolated-safe, no main-thread hop).
         self._capturedFrameSize = frameSize
         
-        // Only publish processedPreviewImage when effects are active (depth/greenscreen/filter).
-        // Publishing on every frame (30fps) fires objectWillChange on this @EnvironmentObject,
-        // causing SwiftUI to re-evaluate every observing view 30 times/second — even hidden ones.
-        // This floods the main thread and causes 30+ second UI freezes during tab transitions.
-        let needsProcessedPreview = self.depthProcessor.isEnabled || currentFilter != .none
+        // Only publish processedPreviewImage when effects or watermark are active.
+        let needsProcessedPreview = self.depthProcessor.isEnabled || currentFilter != .none || !isPro
         if needsProcessedPreview {
             Task { @MainActor in
                 self.processedPreviewImage = ciImage
@@ -1119,16 +1200,28 @@ class CinematicCameraService: NSObject, ObservableObject {
             let writer = assetWriter
             assetWriter = nil
             
+            // Capture MainActor state for the closure
+            let targetURL = currentVideoURL
+            
+            // Unsafe Sendable wrapper to appease Swift 6 strict concurrency checks
+            final class WriterBox: @unchecked Sendable {
+                let writer: AVAssetWriter?
+                init(_ writer: AVAssetWriter?) { self.writer = writer }
+            }
+            let box = WriterBox(writer)
+            
             writer?.finishWriting { [weak self] in
-                guard let self = self else { return }
-                if let error = writer?.error {
-                    self.recordingContinuation?.resume(throwing: error)
-                } else if let url = self.currentVideoURL {
-                    self.recordingContinuation?.resume(returning: url)
-                } else {
-                    self.recordingContinuation?.resume(throwing: CameraError.recordingFailed(NSError(domain: "CinematicCamera", code: -6)))
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    if let error = box.writer?.error {
+                        self.recordingContinuation?.resume(throwing: error)
+                    } else if let url = targetURL {
+                        self.recordingContinuation?.resume(returning: url)
+                    } else {
+                        self.recordingContinuation?.resume(throwing: CameraError.recordingFailed(NSError(domain: "CinematicCamera", code: -6)))
+                    }
+                    self.recordingContinuation = nil
                 }
-                self.recordingContinuation = nil
             }
         }
     }

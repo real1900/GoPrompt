@@ -120,26 +120,7 @@ struct RecordingView: View {
             // LAYER 2: Controls & Interfaces
             GeometryReader { safeGeo in
                 ZStack {
-                    
-                    // HUD (Top)
-                    if cameraService.isRecording {
-                        VStack {
-                            RecordingHUDView(
-                                duration: cameraService.recordingDuration,
-                                isPaused: teleprompterEngine.isPaused,
-                                onPauseToggled: {
-                                    if teleprompterEngine.isPaused {
-                                        teleprompterEngine.resumeScrolling()
-                                    } else {
-                                        teleprompterEngine.pauseScrolling()
-                                    }
-                                }
-                            )
-                            Spacer()
-                        }
-                        .zIndex(3)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                    }
+
                     
                     VStack(spacing: 8) {
                         Spacer()
@@ -377,80 +358,6 @@ struct RecordingView: View {
                 print("Stop recording failed: \(error)")
             }
         }
-    }
-}
-
-// MARK: - HUD Overlay
-struct RecordingHUDView: View {
-    let duration: TimeInterval
-    let isPaused: Bool
-    var onPauseToggled: () -> Void
-    
-    var body: some View {
-        HStack {
-            // REC Pill
-            HStack(spacing: 8) {
-                Image(systemName: "video.fill")
-                    .foregroundColor(DesignSystem.Colors.destructive)
-                    .modifier(PulsingModifier())
-                
-                Text("REC \(formatDuration(duration))")
-                    .font(DesignSystem.Typography.headline.weight(.semibold))
-                    .foregroundColor(DesignSystem.Colors.primaryText)
-                    .fontDesign(.monospaced)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .glassPanel(cornerRadius: 30)
-            
-            Spacer()
-            
-            HStack(spacing: 16) {
-                // Pause Script Pill
-                Button(action: onPauseToggled) {
-                    HStack(spacing: 8) {
-                        Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                        Text(isPaused ? "RESUME" : "PAUSE SCRIPT")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(DesignSystem.Colors.primaryText)
-                            .tracking(1.0)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .glassPanel(cornerRadius: 30)
-                }
-                
-                Image(systemName: "sensors")
-                    .font(.system(size: 18))
-                    .foregroundColor(DesignSystem.Colors.accent)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 16) // Safe area padding handled by safeGeo usually
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-}
-
-struct PulsingModifier: ViewModifier {
-    @State private var isPulsing = false
-    
-    func body(content: Content) -> some View {
-        content
-            .opacity(isPulsing ? 0.3 : 1.0)
-            .animation(
-                .easeInOut(duration: 0.8)
-                .repeatForever(autoreverses: true),
-                value: isPulsing
-            )
-            .onAppear {
-                isPulsing = true
-            }
     }
 }
 
