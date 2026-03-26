@@ -98,6 +98,11 @@ struct TeleprompterApp: App {
                 .onAppear {
                     preWarmCamera()
                     watchdog.start()
+                    // Ensure camera knows current Pro status
+                    cameraService.isProStatus = storeKitManager.isProUnlocked
+                }
+                .onChange(of: storeKitManager.isProUnlocked) { unlocked in
+                    cameraService.isProStatus = unlocked
                 }
         }
     }

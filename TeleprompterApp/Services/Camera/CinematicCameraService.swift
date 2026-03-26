@@ -18,7 +18,7 @@ class CinematicCameraService: NSObject, ObservableObject {
     // MARK: - Pro & Watermark State
     
     nonisolated(unsafe) var renderStateIsPro: Bool = false
-    @Published private(set) var isProStatus: Bool = false {
+    @Published var isProStatus: Bool = false {
         didSet { renderStateIsPro = isProStatus }
     }
     
@@ -833,36 +833,22 @@ class CinematicCameraService: NSObject, ObservableObject {
     }
     
     nonisolated private func updateConnectionOrientation(_ connection: AVCaptureConnection, to orientation: UIDeviceOrientation) {
-        if #available(iOS 17.0, *) {
-            let angle: CGFloat
-            switch orientation {
-            case .portrait: angle = 90
-            case .landscapeLeft: angle = 0
-            case .landscapeRight: angle = 180
-            case .portraitUpsideDown: angle = 270
-            default: angle = 90
-            }
-            if connection.isVideoRotationAngleSupported(angle) {
-                connection.videoRotationAngle = angle
-            }
-        } else {
-            let videoOrientation: AVCaptureVideoOrientation
-            switch orientation {
-            case .portrait:
-                videoOrientation = .portrait
-            case .landscapeLeft:
-                videoOrientation = .landscapeRight
-            case .landscapeRight:
-                videoOrientation = .landscapeLeft
-            case .portraitUpsideDown:
-                videoOrientation = .portraitUpsideDown
-            default:
-                videoOrientation = .portrait
-            }
-            
-            if connection.isVideoOrientationSupported {
-                connection.videoOrientation = videoOrientation
-            }
+        let videoOrientation: AVCaptureVideoOrientation
+        switch orientation {
+        case .portrait:
+            videoOrientation = .portrait
+        case .landscapeLeft:
+            videoOrientation = .landscapeRight
+        case .landscapeRight:
+            videoOrientation = .landscapeLeft
+        case .portraitUpsideDown:
+            videoOrientation = .portraitUpsideDown
+        default:
+            videoOrientation = .portrait
+        }
+        
+        if connection.isVideoOrientationSupported {
+            connection.videoOrientation = videoOrientation
         }
     }
 
@@ -935,7 +921,17 @@ class CinematicCameraService: NSObject, ObservableObject {
         recordingStartTime = startTime
         recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.recordingDuration = Date().timeIntervalSince(startTime)
+                guard let self = self else { return }
+                let currentDuration = Date().timeIntervalSince(startTime)
+                self.recordingDuration = currentDuration
+                
+                // Mark: - Pro Feature Check: Unlimited Recording
+                // Free users are restricted to 60 seconds per video.
+                if !self.isProStatus && currentDuration >= 60.0 {
+                    if self.isRecording {
+                        _ = try? await self.stopRecording()
+                    }
+                }
             }
         }
         

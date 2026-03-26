@@ -447,7 +447,7 @@ struct ProUpgradeView: View {
                 pulseScale = 1.15
             }
         }
-        .onChange(of: storeKitManager.isProUnlocked) { unlocked in
+        .onChange(of: storeKitManager.isProUnlocked) { _, unlocked in
             if unlocked {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     dismiss()

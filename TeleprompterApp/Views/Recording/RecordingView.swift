@@ -207,6 +207,12 @@ struct RecordingView: View {
         .onChange(of: settings.videoQuality) { _, _ in syncCameraSettings() }
         .onChange(of: settings.frameRate) { _, _ in syncCameraSettings() }
         .onChange(of: settings.stabilizationEnabled) { _, _ in syncCameraSettings() }
+        .onChange(of: cameraService.isRecording) { wasRecording, isRecording in
+            if !isRecording {
+                teleprompterEngine.stopScrolling()
+                teleprompterEngine.resetToTop()
+            }
+        }
     }
     
     // MARK: - Methods
@@ -345,10 +351,12 @@ struct RecordingView: View {
     
     private func handleStopTapped() {
         Task {
+            // Stop UI immediately for responsiveness
+            teleprompterEngine.stopScrolling()
+            teleprompterEngine.resetToTop()
+            
             do {
                 let videoURL = try await cameraService.stopRecording()
-                teleprompterEngine.stopScrolling()
-                teleprompterEngine.resetToTop()
                 
                 let title = appState.currentScript?.title ?? Script.sample.title
                 try await cameraService.exportToPhotos(videoURL: videoURL, scriptTitle: title)
